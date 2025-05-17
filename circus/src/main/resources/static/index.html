@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Цирк - Главная</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background-color: #ff4500;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        main {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .shows-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .show-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .show-info {
+            padding: 15px;
+        }
+        .show-info h3 {
+            margin-top: 0;
+            color: #ff4500;
+        }
+        .show-price {
+            font-weight: bold;
+            color: #333;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #ff4500;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #e03d00;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .debug-panel {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .debug-output {
+            max-height: 300px;
+            overflow: auto;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Добро пожаловать в цирк!</h1>
+    <nav>
+        <ul>
+            <li><a onclick="showHomePage()">Главная</a></li>
+            <li><a onclick="loadShows()">Представления</a></li>
+            <li><a onclick="loadActors()">Артисты</a></li>
+            <li><a onclick="loadPerformances()">Расписание</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main>
+    <div id="content">
+        <h2>Добро пожаловать в наш цирк!</h2>
+        <p>Выберите раздел в меню выше, чтобы посмотреть информацию о представлениях, артистах и расписании.</p>
+    </div>
+
+    <div class="debug-panel">
+        <h3>Отладочная панель</h3>
+        <button class="btn" onclick="testAPI()">Проверить API</button>
+        <div id="debug-output" class="debug-output"></div>
+    </div>
+</main>
+
+<footer>
+    <p>&copy; 2025 Цирк. Все права защищены.</p>
+</footer>
+
+<script>
+    // Отладочная функция для вывода информации
+    function log(message, data) {
+        const debugOutput = document.getElementById('debug-output');
+        const timestamp = new Date().toLocaleTimeString();
+
+        let logMessage = `[${timestamp}] ${message}`;
+        if (data) {
+            if (typeof data === 'object') {
+                logMessage += ': ' + JSON.stringify(data, null, 2);
+            } else {
+                logMessage += ': ' + data;
+            }
+        }
+
+        debugOutput.innerHTML += logMessage + '\n';
+        debugOutput.scrollTop = debugOutput.scrollHeight;
+        console.log(message, data);
+    }
+
+    // Функция для обработки ошибок запросов
+    function handleFetchError(error, entityName) {
+        log(`Ошибка загрузки ${entityName}`, error.message);
+        document.getElementById('content').innerHTML = `
+            <h2>Ошибка</h2>
+            <p>Не удалось загрузить ${entityName}: ${error.message}</p>
+        `;
+    }
+
+    // Загрузка главной страницы
+    function showHomePage() {
+        log('Отображение главной страницы');
+        document.getElementById('content').innerHTML = `
+            <h2>Добро пожаловать в наш цирк!</h2>
+            <p>Выберите раздел в меню выше, чтобы посмотреть информацию о представлениях, артистах и расписании.</p>
+        `;
+    }
+
+    // Загрузка списка представлений
+    function loadShows() {
+        log('Загрузка представлений');
+        document.getElementById('content').innerHTML = '<h2>Загрузка представлений...</h2>';
+
+        fetch('/api/shows')
+            .then(response => {
+                log('Ответ API представлений', `Статус: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(shows => {
+                log('Полученные представления', shows);
+                let content = document.getElementById('content');
+                content.innerHTML = '<h2>Представления</h2>';
+
+                if (!shows || shows.length === 0) {
+                    content.innerHTML += '<p>Нет доступных представлений</p>';
+                    return;
+                }
+
+                let showsGrid = document.createElement('div');
+                showsGrid.className = 'shows-grid';
+
+                shows.forEach(show => {
+                    let showCard = document.createElement('div');
+                    showCard.className = 'show-card';
+
+                    showCard.innerHTML = `
+                        <div class="show-info">
+                            <h3>${show.nazvatie || 'Без названия'}</h3>
+                            <p>${show.opisanie || 'Нет описания'}</p>
+                            <p class="show-price">Цена: ${show.cena || 0} руб.</p>
+                            <p>Возрастное ограничение: ${show.vozrastOgr || 0}+</p>
+                            <button class="btn" onclick="loadShowDetails(${show.id})">Подробнее</button>
+                        </div>
+                    `;
+
+                    showsGrid.appendChild(showCard);
+                });
+
+                content.appendChild(showsGrid);
+            })
+            .catch(error => handleFetchError(error, 'представления'));
+    }
+
+    // Загрузка списка артистов
+    function loadActors() {
+        log('Загрузка артистов');
+        document.getElementById('content').innerHTML = '<h2>Загрузка артистов...</h2>';
+
+        fetch('/api/actors')
+            .then(response => {
+                log('Ответ API артистов', `Статус: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(actors => {
+                log('Полученные артисты', actors);
+                let content = document.getElementById('content');
+                content.innerHTML = '<h2>Артисты</h2>';
+
+                if (!actors || actors.length === 0) {
+                    content.innerHTML += '<p>Нет доступных артистов</p>';
+                    return;
+                }
+
+                let actorsGrid = document.createElement('div');
+                actorsGrid.className = 'shows-grid';
+
+                actors.forEach(actor => {
+                    let actorCard = document.createElement('div');
+                    actorCard.className = 'show-card';
+
+                    const formattedDate = actor.vozrast ? formatDate(actor.vozrast) : 'Не указана';
+
+                    actorCard.innerHTML = `
+                        <div class="show-info">
+                            <h3>${actor.familia || ''} ${actor.name || 'Без имени'}</h3>
+                            <p>Дата рождения: ${formattedDate}</p>
+                            <button class="btn" onclick="loadActorDetails(${actor.id})">Подробнее</button>
+                        </div>
+                    `;
+
+                    actorsGrid.appendChild(actorCard);
+                });
+
+                content.appendChild(actorsGrid);
+            })
+            .catch(error => handleFetchError(error, 'артистов'));
+    }
+
+    // Загрузка расписания
+    function loadPerformances() {
+        log('Загрузка расписания');
+        document.getElementById('content').innerHTML = '<h2>Загрузка расписания...</h2>';
+
+        fetch('/api/performances/future')
+            .then(response => {
+                log('Ответ API расписания', `Статус: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(performances => {
+                log('Полученное расписание', performances);
+                let content = document.getElementById('content');
+                content.innerHTML = '<h2>Ближайшие представления</h2>';
+
+                if (!performances || performances.length === 0) {
+                    content.innerHTML += '<p>Нет ближайших представлений</p>';
+                    return;
+                }
+
+                let table = document.createElement('table');
+
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Представление</th>
+                            <th>Дата</th>
+                            <th>Время</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                `;
+
+                let tbody = table.querySelector('tbody');
+
+                performances.forEach(performance => {
+                    const showName = performance.show ? (performance.show.nazvatie || 'Неизвестно') : 'Неизвестно';
+                    const formattedDate = performance.date ? formatDate(performance.date) : 'Не указана';
+                    const formattedTime = performance.time || 'Не указано';
+
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${showName}</td>
+                        <td>${formattedDate}</td>
+                        <td>${formattedTime}</td>
+                        <td>
+                            <button class="btn" onclick="buyTicket(${performance.id})">Купить билет</button>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+
+                content.appendChild(table);
+            })
+            .catch(error => handleFetchError(error, 'расписание'));
+    }
+
+    // Загрузка деталей представления
+    function loadShowDetails(showId) {
+        log('Загрузка деталей представления', `ID: ${showId}`);
+        document.getElementById('content').innerHTML = '<h2>Загрузка информации о представлении...</h2>';
+
+        fetch(`/api/shows/${showId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(show => {
+                log('Полученные детали представления', show);
+                let content = document.getElementById('content');
+
+                content.innerHTML = `
+                    <h2>${show.nazvatie || 'Без названия'}</h2>
+                    <p>${show.opisanie || 'Нет описания'}</p>
+                    <p class="show-price">Цена: ${show.cena || 0} руб.</p>
+                    <p>Возрастное ограничение: ${show.vozrastOgr || 0}+</p>
+                `;
+
+                // Загрузка расписания для этого представления
+                fetch(`/api/performances/future/show/${showId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(performances => {
+                        log('Полученное расписание для представления', performances);
+
+                        if (performances && performances.length > 0) {
+                            let scheduleSection = document.createElement('div');
+                            scheduleSection.innerHTML = '<h3>Расписание:</h3>';
+
+                            let table = document.createElement('table');
+                            table.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>Дата</th>
+                                        <th>Время</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            `;
+
+                            let tbody = table.querySelector('tbody');
+
+                            performances.forEach(performance => {
+                                const formattedDate = performance.date ? formatDate(performance.date) : 'Не указана';
+                                const formattedTime = performance.time || 'Не указано';
+
+                                let row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${formattedDate}</td>
+                                    <td>${formattedTime}</td>
+                                    <td>
+                                        <button class="btn" onclick="buyTicket(${performance.id})">Купить билет</button>
+                                    </td>
+                                `;
+
+                                tbody.appendChild(row);
+                            });
+
+                            scheduleSection.appendChild(table);
+                            content.appendChild(scheduleSection);
+                        } else {
+                            content.innerHTML += '<p>Нет запланированных показов для этого представления</p>';
+                        }
+
+// Загрузка актеров для этого представления
+                            if (show.actors && show.actors.length > 0) {
+                                let actorsSection = document.createElement('div');
+                                actorsSection.innerHTML = '<h3>В представлении участвуют:</h3>';
+
+                                let actorsList = document.createElement('ul');
+
+                                show.actors.forEach(actor => {
+                                    let listItem = document.createElement('li');
+                                    listItem.textContent = `${actor.familia || ''} ${actor.name || 'Без имени'}`;
+                                    actorsList.appendChild(listItem);
+                                });
+
+                                actorsSection.appendChild(actorsList);
+                                content.appendChild(actorsSection);
+                            }
+
+                            // Кнопка возврата
+                            let backButton = document.createElement('button');
+                            backButton.className = 'btn';
+                            backButton.textContent = 'Вернуться к списку представлений';
+                            backButton.onclick = loadShows;
+                            content.appendChild(backButton);
+                        })
+                        .catch(error => {
+                            log('Ошибка при загрузке расписания', error.message);
+                            content.innerHTML += `<p>Не удалось загрузить расписание: ${error.message}</p>`;
+
+                            // Кнопка возврата даже при ошибке
+                            let backButton = document.createElement('button');
+                            backButton.className = 'btn';
+                            backButton.textContent = 'Вернуться к списку представлений';
+                            backButton.onclick = loadShows;
+                            content.appendChild(backButton);
+                        });
+                })
+                .catch(error => handleFetchError(error, 'информацию о представлении'));
+        }
+
+        // Загрузка деталей артиста
+        function loadActorDetails(actorId) {
+            log('Загрузка деталей артиста', `ID: ${actorId}`);
+            document.getElementById('content').innerHTML = '<h2>Загрузка информации об артисте...</h2>';
+
+            fetch(`/api/actors/${actorId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(actor => {
+                    log('Полученные детали артиста', actor);
+                    let content = document.getElementById('content');
+
+                    const formattedDate = actor.vozrast ? formatDate(actor.vozrast) : 'Не указана';
+
+                    content.innerHTML = `
+                        <h2>${actor.familia || ''} ${actor.name || 'Без имени'}</h2>
+                        <p>Дата рождения: ${formattedDate}</p>
+                    `;
+
+                    // Вывод представлений артиста
+                    if (actor.shows && actor.shows.length > 0) {
+                        let showsSection = document.createElement('div');
+                        showsSection.innerHTML = '<h3>Участвует в представлениях:</h3>';
+
+                        let showsList = document.createElement('ul');
+
+                        actor.shows.forEach(show => {
+                            let listItem = document.createElement('li');
+                            listItem.innerHTML = `<a href="#" onclick="loadShowDetails(${show.id}); return false;">${show.nazvatie || 'Без названия'}</a>`;
+                            showsList.appendChild(listItem);
+                        });
+
+                        showsSection.appendChild(showsList);
+                        content.appendChild(showsSection);
+                    } else {
+                        content.innerHTML += '<p>Не участвует ни в одном представлении</p>';
+                    }
+
+                    // Кнопка возврата
+                    let backButton = document.createElement('button');
+                    backButton.className = 'btn';
+                    backButton.style.marginTop = '20px';
+                    backButton.textContent = 'Вернуться к списку артистов';
+                    backButton.onclick = loadActors;
+                    content.appendChild(backButton);
+                })
+                .catch(error => handleFetchError(error, 'информацию об артисте'));
+        }
+
+        // Форма покупки билета
+        function buyTicket(performanceId) {
+            log('Открытие формы покупки билета', `ID: ${performanceId}`);
+            let content = document.getElementById('content');
+            content.innerHTML = '<h2>Загрузка информации о представлении...</h2>';
+
+            fetch(`/api/performances/${performanceId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(performance => {
+                    log('Полученная информация о показе', performance);
+
+                    if (!performance.show) {
+                        throw new Error('Данные о представлении отсутствуют');
+                    }
+
+                    const formattedDate = performance.date ? formatDate(performance.date) : 'Не указана';
+                    const formattedTime = performance.time || 'Не указано';
+
+                    content.innerHTML = `
+                        <h2>Покупка билета</h2>
+                        <h3>${performance.show.nazvatie || 'Без названия'}</h3>
+                        <p>Дата: ${formattedDate}</p>
+                        <p>Время: ${formattedTime}</p>
+                        <p>Цена: ${performance.show.cena || 0} руб.</p>
+
+                        <form id="ticket-form" style="margin-top: 20px;">
+                            <div style="margin-bottom: 10px;">
+                                <label for="user-id">ID пользователя:</label>
+                                <input type="number" id="user-id" required>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="row">Ряд:</label>
+                                <input type="number" id="row" min="1" required>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="seat">Место:</label>
+                                <input type="number" id="seat" min="1" required>
+                            </div>
+                            <button type="submit" class="btn">Купить билет</button>
+                        </form>
+
+                        <button class="btn" style="margin-top: 20px;" onclick="loadPerformances()">Вернуться к расписанию</button>
+                    `;
+
+                    // Обработчик отправки формы
+                    document.getElementById('ticket-form').onsubmit = function(e) {
+                        e.preventDefault();
+
+                        let userId = document.getElementById('user-id').value;
+                        let row = document.getElementById('row').value;
+                        let seat = document.getElementById('seat').value;
+
+                        // Создаем билет
+                        let ticket = {
+                            riad: parseInt(row),
+                            mesto: parseInt(seat),
+                            pokaz: {
+                                id: performanceId
+                            },
+                            polzovatel: {
+                                id: parseInt(userId)
+                            },
+                            skidka: 0, // базовая скидка, будет рассчитана на сервере с учетом льгот
+                            cena: performance.show.cena // базовая цена, будет рассчитана на сервере с учетом скидок
+                        };
+
+                        log('Отправка данных для покупки билета', ticket);
+
+                        fetch('/api/tickets', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(ticket)
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            log('Получен ответ после покупки билета', data);
+
+                            content.innerHTML = `
+                                <h2>Билет успешно куплен!</h2>
+                                <p>Представление: ${performance.show.nazvatie || 'Без названия'}</p>
+                                <p>Дата: ${formattedDate}</p>
+                                <p>Время: ${formattedTime}</p>
+                                <p>Ряд: ${data.riad}</p>
+                                <p>Место: ${data.mesto}</p>
+                                <p>Итоговая цена: ${data.cena} руб.</p>
+                                ${data.skidka > 0 ? `<p>Применена скидка: ${data.skidka}%</p>` : ''}
+
+                                <button class="btn" style="margin-top: 20px;" onclick="loadPerformances()">Вернуться к расписанию</button>
+                            `;
+                        })
+                        .catch(error => {
+                            log('Ошибка при покупке билета', error.message);
+
+                            content.innerHTML = `
+                                <h2>Ошибка при покупке билета</h2>
+                                <p>${error.message}</p>
+                                <p>Возможно, указанное место уже занято или произошла другая ошибка.</p>
+                                <button class="btn" onclick="buyTicket(${performanceId})">Попробовать снова</button>
+                                <button class="btn" style="margin-left: 10px;" onclick="loadPerformances()">Вернуться к расписанию</button>
+                            `;
+                        });
+                    };
+                })
+                .catch(error => handleFetchError(error, 'информацию о представлении'));
+        }
+
+        // Форматирование даты
+        function formatDate(dateString) {
+            if (!dateString) return "Нет данных";
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return "Неверная дата";
+                return date.toLocaleDateString('ru-RU');
+            } catch (e) {
+                return "Ошибка формата";
+            }
+        }
+
+        // Проверка API
+        function testAPI() {
+            log('Проверка API');
+            const endpoints = [
+                '/api/test',
+                '/api/shows',
+                '/api/actors',
+                '/api/performances/future'
+            ];
+
+            document.getElementById('debug-output').innerHTML = 'Начало проверки API...\n';
+
+            endpoints.forEach(endpoint => {
+                log(`Проверка API эндпоинта: ${endpoint}`);
+
+                fetch(endpoint)
+                    .then(response => {
+                        const status = response.status;
+                        const isOk = response.ok;
+
+                        log(`Ответ от ${endpoint}`, `Статус: ${status}, OK: ${isOk}`);
+
+                        if (!isOk) {
+                            throw new Error(`HTTP error! Status: ${status}`);
+                        }
+
+                        return response.text();
+                    })
+                    .then(text => {
+                        try {
+                            // Пытаемся распарсить как JSON
+                            const json = JSON.parse(text);
+                            log(`Данные от ${endpoint}`, json);
+                        } catch (e) {
+                            // Если не JSON, показываем как текст
+                            log(`Текст от ${endpoint}`, text.length > 500 ? text.substring(0, 500) + '...' : text);
+                        }
+                    })
+                    .catch(error => {
+                        log(`Ошибка при проверке ${endpoint}`, error.message);
+                    });
+            });
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Страница загружена');
+
+            // Перехватываем клики по меню
+            document.querySelectorAll('nav a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    log(`Клик по пункту меню: ${this.textContent}`);
+                    // Функционал обработан в onclick
+                });
+            });
+        });
+</script>
+</body>
+</html>
